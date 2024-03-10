@@ -1,0 +1,6 @@
+haskell/dist-newstyle*
+*TAGS
+*.prof
+*.hp
+*.eventlog*
+*~
