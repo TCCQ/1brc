@@ -1,5 +1,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE BangPatterns #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# HLINT ignore "Redundant bracket" #-}
 
 module Main where
 
@@ -26,9 +28,8 @@ data WeatherReport =
   deriving (Eq)
 
 foldStep :: HashMap T.Text WeatherStation -> WeatherReport -> HashMap T.Text WeatherStation
-foldStep !m !(WeatherReport name val) =
-  alter (\existing ->
-            updateStation val existing) name m
+foldStep !m (WeatherReport name val) =
+  alter (updateStation val) name m
 
 readLoop :: IO [WeatherReport]
 readLoop =
@@ -38,15 +39,15 @@ readLoop =
       then
       return []
       else do
-      h <- (liftM parseLine getLine)
-      liftM (h:) readLoop
+      h <- fmap parseLine getLine
+      fmap (h:) readLoop
 
 main :: IO ()
 main = do
   iList <- readLoop
-  hmap <- return $ Data.List.foldl' foldStep
-                                    (Data.HashMap.Strict.empty :: HashMap T.Text WeatherStation)
-                                    iList
+  let hmap = Data.List.foldl' foldStep
+             (Data.HashMap.Strict.empty :: HashMap T.Text WeatherStation)
+             iList
   sorted <- {-# SCC "main-sorting" #-} return $ Data.List.sortOn fst $! toList hmap
   putStr $ T.pack "{"
   printIter sorted
@@ -54,12 +55,11 @@ main = do
 
 parseLine :: T.Text -> WeatherReport
 parseLine !line =
-  case (
-    T.split (== ';') line
-       ) of
-    (name:rest:[]) -> case (T.split (=='.') rest) of
-      (left:right:[]) -> WeatherReport name $! (((read (T.unpack left))*10) + (read (T.unpack right)))
-    _ -> error $ "Couldn't parse line" ++ (T.unpack line)
+  case T.split (== ';') line of
+    [name,rest] -> case T.split (=='.') rest of
+      [left,right] -> WeatherReport name $! (((read (T.unpack left))*10) + (read (T.unpack right)))
+      _ -> error $ "Couldn't parse line" ++ T.unpack line
+    _ -> error $ "Couldn't parse line" ++ T.unpack line
 
 updateStation :: Int64 -> Maybe WeatherStation -> Maybe WeatherStation
 updateStation !val !prior =
@@ -73,7 +73,7 @@ fromFakeFloat !i =
  (show (i `div` 10)) ++ ('.':(show (i `mod` 10)))
 
 printSingle :: (T.Text, WeatherStation) -> T.Text
-printSingle !(name, (WeatherStation min max sum num)) =
+printSingle (name, (WeatherStation min max sum num)) =
   T.concat $ name:(fmap T.pack
                  [
                    "=",
@@ -86,9 +86,9 @@ printSingle !(name, (WeatherStation min max sum num)) =
                 )
 
 printIter :: [(T.Text, WeatherStation)] -> IO ()
-printIter ![] = mempty
-printIter !(h:n:rest) =
+printIter [] = mempty
+printIter (h:n:rest) =
   do
-    hPutStrLn stdout $ printSingle h
+    Data.Text.IO.putStrLn $ printSingle h
     (printIter (n:rest))
-printIter !(h:_) = hPutStrLn stdout $ printSingle h  -- last element
+printIter [h] = Data.Text.IO.putStrLn $ printSingle h  -- last element

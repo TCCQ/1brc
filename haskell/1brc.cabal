@@ -56,8 +56,8 @@ common warnings
                  -O2
                  -threaded
                  -- -prof see configure
-                 -fprof-auto
-                 "-with-rtsopts=-N -p -l-au -hc -sstderr"
+                 -- -fprof-auto
+                 -- "-with-rtsopts=-N -p -l-au -hc -sstderr"
 
 executable 1brc
     -- Import common warning flags.
